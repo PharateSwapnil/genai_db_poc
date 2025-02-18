@@ -26,7 +26,9 @@ from langchain.tools.retriever import create_retriever_tool
 from langgraph.prebuilt import ToolNode
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
-from prompt_templates import SYSTEM_PROMPT_MESSAGE, INSIGHTS_PROMPT_TEMPLATE
+from prompt_templates import SYSTEM_PROMPT_MESSAGE, \
+                            INSIGHTS_PROMPT_TEMPLATE, \
+                            FORECAST_PROMPT_TEMPLATE
 
 # ---------------- CONSTANTS ----------------------
 HF_EMBEDDING_MODEL = 'all-MiniLM-L6-v2'
@@ -36,18 +38,18 @@ DATA_BASE_PATH = "/home/richhiey/Desktop/code/genai/data"
 DB_PATH = os.path.join(DATA_BASE_PATH, "time_series", "time_series.sqlite")
 KB_PATHS = [os.path.join(DATA_BASE_PATH, "time_series", "datapackage.json"),]
 # --------------------------------------
-MODEL_TO_USE_DICT = {
-    "provider": "groq",
-    "name": "llama3-8b-8192"
-}
-MODEL_TO_USE_DICT = {
-    "provider": "ollama",
-    "name": "llama3-groq-tool-use:latest"
-}
-MODEL_TO_USE_DICT = {
-    "provider": "huggingface",
-    "name": "HuggingFaceH4/zephyr-7b-gemma-v0.1"
-}
+# MODEL_TO_USE_DICT = {
+#     "provider": "groq",
+#     "name": "llama3-8b-8192"
+# }
+# MODEL_TO_USE_DICT = {
+#     "provider": "ollama",
+#     "name": "llama3-groq-tool-use:latest"
+# }
+# MODEL_TO_USE_DICT = {
+#     "provider": "huggingface",
+#     "name": "HuggingFaceH4/zephyr-7b-gemma-v0.1"
+# }
 MODEL_TO_USE_DICT = {
     "provider": "google",
     "name": "gemini-2.0-flash"
@@ -63,9 +65,9 @@ insights_prompt_template = PromptTemplate(
     input_variables=["question", "answer", "context"],
     template=INSIGHTS_PROMPT_TEMPLATE
 )
-extract_final_answer_template = PromptTemplate(
-    input_variables=["question"],
-    template="Extract text data from the given question within the section Final Answer: and return that as a piece of text"
+forecast_prompt_template = PromptTemplate(
+    input_variables=["question", "context", "table_names_str"],
+    template=FORECAST_PROMPT_TEMPLATE
 )
 # --------------------------------------
 
@@ -203,25 +205,28 @@ def create_db_agent_graph(model_with_tools, tools, retrieval_tool, prompt_templa
     def should_continue(state: DBAgentState):
         messages = state["messages"]
         last_message = messages[-1]
-        # print(last_message.tool_calls)
         if last_message.tool_calls:
             return "tools"
         return "insights"
 
     def call_model(state: DBAgentState):
-        prompt = prompt_template.invoke({
+        prompt = forecast_prompt_template.invoke({
             "question": state["question"],
             "context": state["context"],
         })
         response = model_with_tools.invoke(prompt)
-        # print(response)
         return {"messages": [response]}
+
+    def chronos_tool(state: DBAgentState):
+        from forecast import generate_forecast
+        # forecast = generate_forecast()
 
     tool_node = ToolNode(tools)
     workflow = StateGraph(DBAgentState)
     workflow.add_node("retrieve", retrieve)
     workflow.add_node("agent", call_model)
     workflow.add_node("tools", tool_node)
+    workflow.add_node("forecast", chronos_tool)
     workflow.add_node("insights", insight_generator)
     workflow.add_edge(START, "retrieve")
     workflow.add_edge("retrieve", "agent")
@@ -298,7 +303,7 @@ db_agent = create_db_agent()
 
 if __name__ == "__main__":
     messages = db_agent.invoke({
-        "question": "Forecast the load in Austria for next week."
+        "question": "List down the number of power plants by country and state in Germany"
     })
     print(messages["messages"])
 

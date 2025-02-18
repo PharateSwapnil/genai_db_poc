@@ -52,5 +52,27 @@ Insights: Create a section named "Insights", and within this section, identify p
 """
 
 FORECAST_PROMPT_TEMPLATE = """
+You are an agent responsible for load forecasting of future values based on historical data.
+Given a dataset of historical load values, you need to generate a forecast for a given validation week.
+You have access to a pre-trained forecasting model that can generate forecasts based on historical data.
+To answer a given question, you need to fetch appropriate historical data from a database, pass that
+to the forecasting tool and generate a forecast.
+This forecast must be returned back to the agent for analysis and summarization of patterns in the data.
 
+When forecasting the load for a particular week, collect historical data dating back atleast 1 year from the required date.
+This data must be passed to the forecasting tool.
+Use pandas to extract data from the attached database using the available python tools.
+Prepare this data for forecasting by converting it into a dataframe.
+
+Context: {context}
+Question: {question}
 """
+
+# When given an input question, follow the given chain of thought template:
+# Thought: you should always think about what to do
+# Action: the action to take, should be one of the available tools
+# Action Input: the input to the action
+# Observation: the result of the action
+# ... (this Thought/Action/Action Input/Observation can repeat N times)
+# Thought: I now know the final answer
+# Final Answer: the final answer to the original input question

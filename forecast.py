@@ -3,33 +3,37 @@ import torch
 import numpy as np
 import plotly.graph_objects as go
 from chronos import ChronosPipeline
+from langchain_core.tools import tool
 
 # Initialize Chronos
 pipeline = ChronosPipeline.from_pretrained("amazon/chronos-t5-small", torch_dtype=torch.bfloat16)
 
-
-def generate_forecast(df, week_start, horizon):
+@tool
+def generate_forecast_tool(df, pipeline, week_start, horizon, timestamp_col_name="utc_timestamp", load_col_name="AT_load_actual_entsoe_transparency"):
     """
-    Generates a forecast for a given validation week.
+    Generates a forecast for a given validation week based on historical data.
+    --------------------------------
+    Arguments:
+    --------------------------------
+    df: DataFrame containing historical load data.
+    week_start: Start date of the week.
+    horizon: Forecast horizon in hours.
     """
-    train_df = df[df["Timestamp"] < week_start]
-    val_df = df[(df["Timestamp"] >= week_start) & (df["Timestamp"] < week_start + pd.Timedelta(hours=horizon))]
+    train_df = df[df[timestamp_col_name] < week_start]
+    val_df = df[(df[timestamp_col_name] >= week_start) & (df[timestamp_col_name] < week_start + pd.Timedelta(hours=horizon))]
     print(week_start)
     print(horizon)
-    context = torch.tensor(train_df["actual_kwh"].values, dtype=torch.float32)
+    context = torch.tensor(train_df[load_col_name].values, dtype=torch.float32)
     prediction_length = len(val_df)
     print(train_df)
     print(val_df)
     print(f"Prediction length: {prediction_length}")
     forecast = pipeline.predict(context, prediction_length)
-    
     median_forecast = np.median(forecast[0].cpu().numpy(), axis=0)
-    actuals = val_df["actual_kwh"].values
-    
+    actuals = val_df[load_col_name].values  
     mape = np.mean(np.abs((actuals - median_forecast) / actuals)) * 100
-
     return {
-        "timestamps": val_df["Timestamp"].tolist(),
+        "timestamps": val_df[timestamp_col_name].tolist(),
         "actuals": actuals.tolist(),
         "forecasts": median_forecast.tolist(),
         "mape": mape
@@ -80,7 +84,7 @@ if __name__ == "__main__":
     mape_scores = []  # Initialize before the loop
 
     for i, week_start in enumerate(val_weeks):
-        result = generate_forecast(df, pipeline, week_start, horizon)
+        result = generate_forecast_tool(df, pipeline, week_start, horizon)
         all_results.append(result)
         mape_scores.append(result["mape"])
         print(f"Week {i+1} ({week_start.strftime('%Y-%m-%d')}): MAPE = {result['mape']:.2f}%")
