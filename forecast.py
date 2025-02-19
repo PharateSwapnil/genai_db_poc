@@ -8,8 +8,7 @@ from langchain_core.tools import tool
 # Initialize Chronos
 pipeline = ChronosPipeline.from_pretrained("amazon/chronos-t5-small", torch_dtype=torch.bfloat16)
 
-@tool
-def generate_forecast_tool(df, pipeline, week_start, horizon, timestamp_col_name="utc_timestamp", load_col_name="AT_load_actual_entsoe_transparency"):
+def generate_forecast(df, week_start, horizon):
     """
     Generates a forecast for a given validation week based on historical data.
     --------------------------------
@@ -19,8 +18,13 @@ def generate_forecast_tool(df, pipeline, week_start, horizon, timestamp_col_name
     week_start: Start date of the week.
     horizon: Forecast horizon in hours.
     """
-    train_df = df[df[timestamp_col_name] < week_start]
-    val_df = df[(df[timestamp_col_name] >= week_start) & (df[timestamp_col_name] < week_start + pd.Timedelta(hours=horizon))]
+    timestamp_col_name = "utc_timestamp"
+    load_col_name = "AT_load_actual_entsoe_transparency"
+    df = df.sort_values(timestamp_col_name).reset_index(drop=True)
+    df[timestamp_col_name] = pd.to_datetime(df[timestamp_col_name], utc=True) #.dt.tz_localize(None)
+    week_start_dt = pd.to_datetime(week_start, utc=True) # , periods=int(horizon)//24, freq="1D")
+    train_df = df[df[timestamp_col_name] < week_start_dt]
+    val_df = df[(df[timestamp_col_name] >= week_start_dt) & (df[timestamp_col_name] < week_start_dt + pd.Timedelta(hours=horizon))]
     print(week_start)
     print(horizon)
     context = torch.tensor(train_df[load_col_name].values, dtype=torch.float32)
@@ -84,7 +88,7 @@ if __name__ == "__main__":
     mape_scores = []  # Initialize before the loop
 
     for i, week_start in enumerate(val_weeks):
-        result = generate_forecast_tool(df, pipeline, week_start, horizon)
+        result = generate_forecast(df, week_start, horizon)
         all_results.append(result)
         mape_scores.append(result["mape"])
         print(f"Week {i+1} ({week_start.strftime('%Y-%m-%d')}): MAPE = {result['mape']:.2f}%")

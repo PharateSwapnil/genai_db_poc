@@ -32,6 +32,8 @@ Final Answer: the final answer to the original input question
 # Do NOT skip this step.
 # Then you should query the schema of the most relevant tables.
 
+# ===============================================================
+
 INSIGHTS_PROMPT_TEMPLATE = """
 You are an insight-generation agent designed to summarize and identify patterns within data that you recieve.
 Process the data result that is returned, and provide insights based on the values for the given use-case.
@@ -50,6 +52,8 @@ When given an input question, follow the given template:
 Data: Copy the answer here
 Insights: Create a section named "Insights", and within this section, identify patterns in the data and summarize the patterns in natural language and add the generated insights for the original input prompt.
 """
+
+# ===============================================================
 
 FORECAST_PROMPT_TEMPLATE = """
 You are an agent responsible for load forecasting of future values based on historical data.
@@ -76,3 +80,53 @@ Question: {question}
 # ... (this Thought/Action/Action Input/Observation can repeat N times)
 # Thought: I now know the final answer
 # Final Answer: the final answer to the original input question
+
+# ===============================================================
+
+SQL_QUERY_PARSER_PROMPT_MESSAGE = """
+Message: {message}
+Format instructions: {format_instructions}
+You are responsible to parser an input message an note down the SQL statement that are present in the message.
+Given an input message, parse ONLY the SQL statements and do not include any other information.
+Ensure that the SQL query is only extracted once and that the query is extracted correctly from the original message.
+Always ensure a valid SQL query is extracted. If not, do this step again until a valid SQL query is extracted.
+In addition, you also have to extract the start date and horizon for the forecast from the input message
+"""
+
+# ===============================================================
+
+SQL_QUERY_AGENT_PROMPT_MESSAGE = """
+You are an agent responsible for writing SQL queries to access historical data from a database.
+This data will be retrieved from a database using SQL. You must write a valid SQL query to retrieve the data.
+Collect historical data from 1 year before the start date until the end of the forecast horizon. Always order by the timestamp column.
+When selecting columns, always use columns with names that contain the word "actual" in them.
+
+Given an input question, create a syntactically correct {dialect} query to run, and ensure that the query can be executed without errors against the database.
+Once the final query has been generated, return only the sql query as output for the next step.
+You can order the results by a relevant column to return the most interesting examples in the database.
+Never query for all the columns from a specific table, only ask for the relevant columns given the question.
+You have access to tools for interacting with the database.
+Only use the below tools. Only use the information returned by the below tools to construct your final answer.
+You MUST double check your query before executing it. If you get an error while executing a query, rewrite the query and try again.
+Never return a query that does not execute and return a result!!
+DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database.
+
+Context: {context}
+Question: {question}
+
+Only use the following tables:
+The tables in the given database are:
+{table_names_str}
+The column to be used for the tables in the database are:
+{column_info_str}
+
+When given an input question, follow the given chain of thought template:
+Thought: you should always think about what to do
+Action: the action to take, should be one of the available tools
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know the final answer
+Final Answer: the final answer to the original input question
+"""
+# ===============================================================

@@ -94,11 +94,9 @@ def get_llm_model(model_dict=MODEL_TO_USE_DICT):
 
     return model
 
-def get_engine_power_plant() -> Engine:
+def load_database(db_path=DB_PATH) -> Engine:
     """Engine for opsd data."""
-    return create_engine(
-        f"sqlite:///{DB_PATH}", poolclass=StaticPool
-    )
+    return create_engine(f"sqlite:///{db_path}", poolclass=StaticPool)
 
 def filter_metadata(metadata):
     filtered_metadata = {}
@@ -260,6 +258,7 @@ def get_db_info_str():
     # Get column names for each table
     for table in table_names:
         columns = get_column_names(table)
+        columns = [column_name for column_name in columns if "forecast" not in column_name]
         column_info_str += f"Columns in {table}: {columns}"
     print(table_names)
     # print(column_info_str)
@@ -269,7 +268,7 @@ def create_db_agent():
     # --- Load LLM model ---
     model = get_llm_model()
     # --- Load database and Langchain DB toolkit  --- 
-    engine = get_engine_power_plant()
+    engine = load_database()
     db = SQLDatabase(engine)
     toolkit = SQLDatabaseToolkit(db=db, llm=model)
     # --- Load embedding model ---
