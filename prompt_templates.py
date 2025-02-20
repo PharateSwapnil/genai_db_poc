@@ -90,7 +90,10 @@ You are responsible to parser an input message an note down the SQL statement th
 Given an input message, parse ONLY the SQL statements and do not include any other information.
 Ensure that the SQL query is only extracted once and that the query is extracted correctly from the original message.
 Always ensure a valid SQL query is extracted. If not, do this step again until a valid SQL query is extracted.
-In addition, you also have to extract the start date and horizon for the forecast from the input message
+In addition, you also have to extract the start date and horizon for the forecast from the input message.
+The start date is the date from when we want to start the forecast.
+The horizon is the period in hours for which we need to forecast the load.
+If the value for horizon could not be extracted from the input message, set the horizon to 96 hours.
 """
 
 # ===============================================================
@@ -100,6 +103,7 @@ You are an agent responsible for writing SQL queries to access historical data f
 This data will be retrieved from a database using SQL. You must write a valid SQL query to retrieve the data.
 Collect historical data from 1 year before the start date until the end of the forecast horizon. Always order by the timestamp column.
 When selecting columns, always use columns with names that contain the word "actual" in them.
+Only consider columns for the specific countries mentioned in the input question based on the context.
 
 Given an input question, create a syntactically correct {dialect} query to run, and ensure that the query can be executed without errors against the database.
 Once the final query has been generated, return only the sql query as output for the next step.

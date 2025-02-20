@@ -17,7 +17,7 @@ from langgraph.prebuilt import ToolNode
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain_community.utilities.sql_database import SQLDatabase
 
-from forecast import generate_forecast
+from forecast import generate_forecast, plot_forecasts
 from db_agent_2 import get_llm_model, index_json_to_chromadb, load_chromadb_from_path, \
                         _create_retriever_tool, load_database, get_db_info_str, DBAgentState, \
                         MODEL_TO_USE_DICT, HF_EMBEDDING_MODEL, CHROMADB_PERSIST_PATH, DATA_BASE_PATH
@@ -96,10 +96,22 @@ def create_forecast_agent_graph(model_with_tools, tools, retrieval_tool, prompt_
         print(response)
         db_results = fetch_results_from_db(response["sql_query"])
         df_results = pd.DataFrame(db_results)
-        print(df_results)
-        forecast = generate_forecast(df_results, response["start_date"], response["horizon"])
-        print(forecast)
-        return {"messages": [forecast]}
+        forecast = generate_forecast(
+            df_results, response["start_date"], response["horizon"]
+        )
+        df_forecast = pd.DataFrame(forecast)
+        forecast_start_dt = pd.to_datetime(response["start_date"], utc=True)
+        forecast_end_dt = forecast_start_dt + pd.Timedelta(hours=response["horizon"])
+        fig = plot_forecasts(
+            forecast,
+            forecast_start_dt.strftime("%Y-%m-%d"),
+            forecast_end_dt.strftime("%Y-%m-%d")
+        )
+        print(df_forecast)
+        return {"forecast_df": df_forecast, "plot": fig, "messages": [last_message]}
+
+    def summarize_forecast():
+        pass
 
     tool_node = ToolNode(tools)
     workflow = StateGraph(DBAgentState)
@@ -151,7 +163,8 @@ agent = create_forecast_agent()
 if __name__ == "__main__":
     question = """
     Forecast load data in Austria for the first week of December 2015.
-    Load data from one year before the start week and forecast load data for a horizon of the next 10 days after the start week"
+    Retrieve data from one year before the start week and forecast load data for a horizon of the next 10 days after the start week.
     Choose the database containing datapoints at an interval of 1 hour.
     """
     answer = agent.invoke({"question": question})
+    print(answer)

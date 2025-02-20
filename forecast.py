@@ -22,9 +22,10 @@ def generate_forecast(df, week_start, horizon):
     load_col_name = "AT_load_actual_entsoe_transparency"
     df = df.sort_values(timestamp_col_name).reset_index(drop=True)
     df[timestamp_col_name] = pd.to_datetime(df[timestamp_col_name], utc=True) #.dt.tz_localize(None)
-    week_start_dt = pd.to_datetime(week_start, utc=True) # , periods=int(horizon)//24, freq="1D")
-    train_df = df[df[timestamp_col_name] < week_start_dt]
-    val_df = df[(df[timestamp_col_name] >= week_start_dt) & (df[timestamp_col_name] < week_start_dt + pd.Timedelta(hours=horizon))]
+    forecast_start_dt = pd.to_datetime(week_start, utc=True) # , periods=int(horizon)//24, freq="1D")
+    forecast_end_dt = forecast_start_dt + pd.Timedelta(hours=horizon)
+    train_df = df[df[timestamp_col_name] < forecast_start_dt]
+    val_df = df[(df[timestamp_col_name] >= forecast_start_dt) & (df[timestamp_col_name] < forecast_end_dt)]
     print(week_start)
     print(horizon)
     context = torch.tensor(train_df[load_col_name].values, dtype=torch.float32)
@@ -40,10 +41,10 @@ def generate_forecast(df, week_start, horizon):
         "timestamps": val_df[timestamp_col_name].tolist(),
         "actuals": actuals.tolist(),
         "forecasts": median_forecast.tolist(),
-        "mape": mape
+        # "mape": mape
     }
 
-def plot_forecasts(all_results, start_date, end_date, mean_mape):
+def plot_forecasts(all_results, start_date, end_date):
     """
     Plots actual vs. forecasted load.
     """
@@ -53,23 +54,26 @@ def plot_forecasts(all_results, start_date, end_date, mean_mape):
     all_actuals = []
     all_forecasts = []
 
-    for result in all_results:
-        all_timestamps.extend(result["timestamps"])
-        all_actuals.extend(result["actuals"])
-        all_forecasts.extend(result["forecasts"])
+    # print(all_results)
+    # kdjjd
+    # for result in all_results:
+    all_timestamps.extend(all_results["timestamps"])
+    all_actuals.extend(all_results["actuals"])
+    all_forecasts.extend(all_results["forecasts"])
 
     fig.add_trace(go.Scatter(x=all_timestamps, y=all_actuals, mode='lines', name='Actual Load', line=dict(color='blue')))
     fig.add_trace(go.Scatter(x=all_timestamps, y=all_forecasts, mode='lines', name='Forecast', line=dict(color='red')))
 
     fig.update_layout(
-        title=f"Chronos Load Forecast from {start_date} to {end_date} Mean MAPE: {mean_mape:.2f}%",
+        title=f"Chronos Load Forecast from {start_date} to {end_date}",
         xaxis_title="Timestamp",
         yaxis_title="Load (kWh)",
         legend_title="Legend",
         template="plotly_dark"
     )
 
-    fig.show()
+    # fig.show()
+    return fig
 
 
 import sqlite3

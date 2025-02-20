@@ -14,10 +14,11 @@ from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain_community.utilities.sql_database import SQLDatabase
 
 import sqlite3
+import pandas as pd
+import plotly.graph_objects as go
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
-
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.prompts import PromptTemplate
 from langchain.docstore.document import Document
@@ -109,7 +110,7 @@ def filter_metadata(metadata):
         filtered_metadata["geographicalScope"] = metadata["geographicalScope"]
     if metadata.get("temporalScope"):
         filtered_metadata["temporalScope"] = metadata["temporalScope"]
-    resources =  metadata["resources"]
+    resources = metadata["resources"]
     filtered_resources = []
     for resource in resources:
         if resource.get("schema") and resource.get("profile") == "tabular-data-resource":
@@ -170,7 +171,7 @@ def load_chromadb_from_path(db_save_path, embedding_model):
     return vector_db
 
 def _create_retriever_tool(vector_db):
-    retriever = vector_db.as_retriever(search_kwargs={"k":10})
+    retriever = vector_db.as_retriever(search_kwargs={"k": 10})
     retriever_tool = create_retriever_tool(
         retriever=retriever,
         name="search_db_metadata",
@@ -182,6 +183,9 @@ class DBAgentState(TypedDict):
     question: str
     context: str
     messages: str
+    forecast_df: pd.DataFrame
+    final_answer: str
+    plot: go.Figure
 
 def create_db_agent_graph(model_with_tools, tools, retrieval_tool, prompt_template):
     def insight_generator(state: DBAgentState):
