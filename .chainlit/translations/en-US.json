@@ -57,7 +57,7 @@
     },
     "chat": {
         "input": {
-            "placeholder": "Hi! I'm your SQL Data Agent, here to answer questions about power plants. :)",
+            "placeholder": "Hi! I'm your SQL Data Agent, here to answer questions about your databases. :)",
             "actions": {
                 "send": "Send message",
                 "stop": "Stop Task",

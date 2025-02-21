@@ -104,7 +104,7 @@ This data will be retrieved from a database using SQL. You must write a valid SQ
 Collect historical data from 1 year before the start date until the end of the forecast horizon. Always order by the timestamp column.
 When selecting columns, always use columns with names that contain the word "actual" in them.
 Only consider columns for the specific countries mentioned in the input question based on the context.
-
+Always select a UTC timestamp column and a load column.
 Given an input question, create a syntactically correct {dialect} query to run, and ensure that the query can be executed without errors against the database.
 Once the final query has been generated, return only the sql query as output for the next step.
 You can order the results by a relevant column to return the most interesting examples in the database.
