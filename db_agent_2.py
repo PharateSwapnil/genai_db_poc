@@ -36,8 +36,8 @@ HF_EMBEDDING_MODEL = 'all-MiniLM-L6-v2'
 # --------------------------------------
 CHROMADB_PERSIST_PATH = "./chromadb/"
 DATA_BASE_PATH = "/home/richhiey/Desktop/code/genai/data"
-DB_PATH = os.path.join(DATA_BASE_PATH, "time_series", "time_series.sqlite")
-KB_PATHS = [os.path.join(DATA_BASE_PATH, "time_series", "datapackage.json"),]
+DB_PATH = os.path.join(DATA_BASE_PATH, "conventional_power_plants", "conventional_power_plants.sqlite")
+KB_PATHS = [os.path.join(DATA_BASE_PATH, "conventional_power_plants", "datapackage.json"),]
 # --------------------------------------
 # MODEL_TO_USE_DICT = {
 #     "provider": "groq",
@@ -306,7 +306,7 @@ db_agent = create_db_agent()
 
 if __name__ == "__main__":
     messages = db_agent.invoke({
-        "question": "List down the number of power plants by country and state in Germany"
+        "question": "Hi!"
     })
     print(messages["messages"])
 
