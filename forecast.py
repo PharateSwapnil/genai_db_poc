@@ -6,7 +6,7 @@ from chronos import ChronosPipeline
 from langchain_core.tools import tool
 
 # Initialize Chronos
-pipeline = ChronosPipeline.from_pretrained("amazon/chronos-t5-tiny", torch_dtype=torch.bfloat16)
+pipeline = ChronosPipeline.from_pretrained("amazon/chronos-t5-small", torch_dtype=torch.bfloat16)
 
 def generate_forecast(df, week_start, horizon):
     """

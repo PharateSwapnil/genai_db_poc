@@ -61,7 +61,7 @@ def create_forecast_agent_graph(model_with_tools, tools, retrieval_tool, prompt_
     def retrieve(state: DBAgentState):
         question = state["question"]
         retrieved_outputs = retrieval_tool.invoke(question)
-        return {"context": retrieved_outputs} 
+        return {"context": retrieved_outputs}
 
     def should_continue(state: DBAgentState):
         messages = state["messages"]
