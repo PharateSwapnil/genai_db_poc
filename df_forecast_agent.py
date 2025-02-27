@@ -41,9 +41,9 @@ class ForecastInformation(BaseModel):
     """
     sql_query: str = Field(description="The SQL query to retrieve historical data from the database")
     start_date: str = Field(description="The start date of the forecast period provided in the input message")
-    horizon: Optional[int] = Field(
-        default=None, description="The forecast horizon in hours provided in the input message"
-    )
+    horizon: int = Field(
+        default=240, description="The time horizon in hours provided in the input message"
+    ) # default horizon is set to 10 days
     column_names: List = Field(
         description="Names of the columns included in the SELECT statement of the SQL query, returned in the same order as seen in the SELECT statement of the SQL query"
     )
@@ -67,7 +67,7 @@ def create_forecast_agent_graph(model_with_tools, tools, retrieval_tool, prompt_
         messages = state["messages"]
         last_message = messages[-1]
         if last_message.tool_calls:
-            return "tools"
+            return "db_tools"
         return "forecast"
 
     def call_model(state: DBAgentState):
@@ -86,6 +86,7 @@ def create_forecast_agent_graph(model_with_tools, tools, retrieval_tool, prompt_
             template=SQL_QUERY_PARSER_PROMPT_MESSAGE
         )
         parser = PydanticOutputParser(pydantic_object=ForecastInformation)
+        print(parser.get_format_instructions())
         response = model_with_tools.invoke(
             sql_query_parser.invoke({
                 "message": last_message,
@@ -97,7 +98,7 @@ def create_forecast_agent_graph(model_with_tools, tools, retrieval_tool, prompt_
         db_results = fetch_results_from_db(response["sql_query"])
         df_results = pd.DataFrame(db_results)
         forecast = generate_forecast(
-            df_results, response["start_date"], response["horizon"]
+            df_results, response["start_date"], response["horizon"], response["column_names"]
         )
         df_forecast = pd.DataFrame(forecast)
         forecast_start_dt = pd.to_datetime(response["start_date"], utc=True)
@@ -109,9 +110,6 @@ def create_forecast_agent_graph(model_with_tools, tools, retrieval_tool, prompt_
         )
         print(df_forecast)
         return {"forecast_df": df_forecast, "plot": fig, "messages": [last_message]}
-
-    def summarize_forecast():
-        pass
 
     tool_node = ToolNode(tools)
     workflow = StateGraph(DBAgentState)
@@ -149,8 +147,8 @@ def create_forecast_agent():
     toolkit = SQLDatabaseToolkit(db=db, llm=model)
     tools = toolkit.get_tools()
     model = model.bind_tools(tools)
-    table_names, column_info =  get_db_info_str()
-
+    table_names, column_info = get_db_info_str(db_path=DB_PATH, time_series=True)
+    print(column_info)
     partial_prompt_template = sql_query_agent_prompt_template.partial(
         dialect="sqlite", table_names_str=table_names, column_info_str=column_info
     )
@@ -162,7 +160,7 @@ agent = create_forecast_agent()
 
 if __name__ == "__main__":
     question = """
-    Forecast load data in Austria for the first week of December 2015.
+    Create a load forecast for Austria for the first week of December 2015.
     Retrieve data from one year before the start week and forecast load data for a horizon of the next 10 days after the start week.
     Choose the database containing datapoints at an interval of 1 hour.
     """

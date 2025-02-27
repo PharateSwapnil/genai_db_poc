@@ -86,6 +86,7 @@ Question: {question}
 SQL_QUERY_PARSER_PROMPT_MESSAGE = """
 Message: {message}
 Format instructions: {format_instructions}
+
 You are responsible to parser an input message an note down the SQL statement that are present in the message.
 Given an input message, parse ONLY the SQL statements and do not include any other information.
 Ensure that the SQL query is only extracted once and that the query is extracted correctly from the original message.
@@ -98,13 +99,15 @@ If the value for horizon could not be extracted from the input message, set the 
 
 # ===============================================================
 
+# When selecting columns, always select columns with column_names that contains the term "load" in them.
+
+
 SQL_QUERY_AGENT_PROMPT_MESSAGE = """
 You are an agent responsible for writing SQL queries to access historical data from a database.
 This data will be retrieved from a database using SQL. You must write a valid SQL query to retrieve the data.
-Collect historical data from 1 year before the start date until the end of the forecast horizon. Always order by the timestamp column.
-When selecting columns, always use columns with names that contain the word "actual" in them.
+Collect historical data from 1 year before the start date until the end of the time horizon. Always order by the timestamp column.
 Only consider columns for the specific countries mentioned in the input question based on the context.
-Always select a UTC timestamp column and a load column.
+Always select a UTC timestamp column and a load column for the actual load.
 Given an input question, create a syntactically correct {dialect} query to run, and ensure that the query can be executed without errors against the database.
 Once the final query has been generated, return only the sql query as output for the next step.
 You can order the results by a relevant column to return the most interesting examples in the database.

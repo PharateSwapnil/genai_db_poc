@@ -1,4 +1,4 @@
-"""Database Agent."""
+"""SQL Database Agent."""
 
 import os
 import json
@@ -82,7 +82,7 @@ def get_llm_model(model_dict=MODEL_TO_USE_DICT):
             do_sample=False,
             repetition_penalty=1.03,
         )
-        model = ChatHuggingFace(llm=llm) # model_dict["name"])
+        model = ChatHuggingFace(llm=llm)
     if model_dict["provider"] == "groq":
         from langchain_groq import ChatGroq
         model = ChatGroq(model=model_dict["name"])
@@ -135,7 +135,7 @@ def split_json_custom(json_data):
     resources =  json_data["resources"]
     filtered_resources = []
     for resource in resources:
-        if resource.get("schema"): # and resource.get("profile") == "tabular-data-resource":
+        if resource.get("schema"):
             filtered_resource = {}
             if resource.get("title"):
                 filtered_resource["table_description"] = resource["title"]
@@ -212,23 +212,19 @@ def create_db_agent_graph(model_with_tools, tools, retrieval_tool, prompt_templa
         return "insights"
 
     def call_model(state: DBAgentState):
-        prompt = forecast_prompt_template.invoke({
+        prompt = prompt_template.invoke({
             "question": state["question"],
             "context": state["context"],
         })
         response = model_with_tools.invoke(prompt)
+        print(response)
         return {"messages": [response]}
-
-    def chronos_tool(state: DBAgentState):
-        from forecast import generate_forecast
-        # forecast = generate_forecast()
 
     tool_node = ToolNode(tools)
     workflow = StateGraph(DBAgentState)
     workflow.add_node("retrieve", retrieve)
     workflow.add_node("agent", call_model)
     workflow.add_node("tools", tool_node)
-    workflow.add_node("forecast", chronos_tool)
     workflow.add_node("insights", insight_generator)
     workflow.add_edge(START, "retrieve")
     workflow.add_edge("retrieve", "agent")
@@ -238,9 +234,9 @@ def create_db_agent_graph(model_with_tools, tools, retrieval_tool, prompt_templa
     app = workflow.compile()
     return app
 
-def get_db_info_str():
+def get_db_info_str(db_path=DB_PATH, time_series=False):
     # Connect to the SQLite database
-    connection = sqlite3.connect(DB_PATH)
+    connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     # Query to get all table names
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -249,7 +245,6 @@ def get_db_info_str():
     # Extract table names from the result
     table_names = [table[0] for table in tables]
     table_names_str = f"Tables: {table_names}"
-    # print("Tables:", table_names)
 
     # Function to get column names for a given table
     def get_column_names(table_name):
@@ -262,10 +257,13 @@ def get_db_info_str():
     # Get column names for each table
     for table in table_names:
         columns = get_column_names(table)
-        columns = [column_name for column_name in columns if "forecast" not in column_name]
-        column_info_str += f"Columns in {table}: {columns}"
-    print(table_names)
-    # print(column_info_str)
+        # Apply filter to remove forecast columns in time-series dataset
+        if time_series:
+            final_columns = [column_name for column_name in columns if "load_actual" in column_name]
+            final_columns += [column_name for column_name in columns if "timestamp" in column_name]
+            column_info_str += f"Columns in {table}: {final_columns}\n"
+        else:
+            column_info_str += f"Columns in {table}: {columns}\n"
     return table_names, column_info_str
 
 def create_db_agent():
@@ -287,7 +285,7 @@ def create_db_agent():
     tools = toolkit.get_tools()
     model = model.bind_tools(tools)
 
-    table_names, column_info =  get_db_info_str()
+    table_names, column_info =  get_db_info_str(DB_PATH)
     partial_prompt_template = system_prompt_template.partial(
         dialect="sqlite", top_k=10, table_names_str=table_names, column_info_str=""
     )
@@ -306,10 +304,9 @@ db_agent = create_db_agent()
 
 if __name__ == "__main__":
     messages = db_agent.invoke({
-        "question": "Hi!"
+        "question": "List down the number of power plants by country and state in Germany."
     })
     print(messages["messages"])
-
 
 
 # ---------------------------------------------------------------------------------
