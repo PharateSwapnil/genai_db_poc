@@ -7,6 +7,7 @@ langchain_groq
 langchain_google_genai
 langchain_ollama
 langgraph
+langgraph-prebuilt
 langchain_chroma
 langchain_community
 pandas

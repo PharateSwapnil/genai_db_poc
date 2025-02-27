@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
 # from askdata.chatbot import react_graph
-from df_forecast_agent import agent as react_graph
+from db_agent_2 import db_agent as react_graph
 
 # @cl.on_message
 # async def main(message: cl.Message):
@@ -39,16 +39,16 @@ async def on_message(msg: cl.Message) -> cl.Message:
     async_function = make_async(sync_fn)
     answer = await async_function()
     # --------------------------------
-    fig = answer["plot"]
-    df = answer["forecast_df"]
+    if answer.get("plot"):
+        fig = answer["plot"]
+        df = answer["forecast_df"]
+        elements = [
+            cl.Plotly(name="chart", figure=fig, display="inline"),
+            # cl.Dataframe(name="dataframe", dataframe=pd.DataFrame(df), display="inline")
+        ]
+        final_answer.elements = elements
     message = answer["messages"][-1]
-    print(type(df))
-    elements = [
-        cl.Plotly(name="chart", figure=fig, display="inline"),
-        # cl.Dataframe(name="dataframe", dataframe=pd.DataFrame(df), display="inline")
-    ]
     final_answer.content = message.content
-    final_answer.elements = elements
     await final_answer.update()
     await final_answer.send()
     print("Done!")
