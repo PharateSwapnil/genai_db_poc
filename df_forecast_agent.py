@@ -86,7 +86,6 @@ def create_forecast_agent_graph(model_with_tools, tools, retrieval_tool, prompt_
             template=SQL_QUERY_PARSER_PROMPT_MESSAGE
         )
         parser = PydanticOutputParser(pydantic_object=ForecastInformation)
-        print(parser.get_format_instructions())
         response = model_with_tools.invoke(
             sql_query_parser.invoke({
                 "message": last_message,
@@ -148,7 +147,6 @@ def create_forecast_agent():
     tools = toolkit.get_tools()
     model = model.bind_tools(tools)
     table_names, column_info = get_db_info_str(db_path=DB_PATH, time_series=True)
-    print(column_info)
     partial_prompt_template = sql_query_agent_prompt_template.partial(
         dialect="sqlite", table_names_str=table_names, column_info_str=column_info
     )
