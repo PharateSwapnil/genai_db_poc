@@ -3,8 +3,6 @@
 PoC to create agents that can retrieve data from a source and generate insights based on it.
 At the moment, it works by generating SQL queries to retrieve relevant data, executing them against a DB that it has access to, and generating responses based on the retrieved data.
 
-[genai_db_poc.webm](https://github.com/user-attachments/assets/5c622830-f6e7-4b97-9d27-2798b2941251)
-
 ### Setup
 
 Virtual environment and installation of requirements can be done with the commands given below:
